@@ -29,5 +29,3 @@ A aplicação exibe:
 
 ---
 
-## 📂 Estrutura do Projeto
-
