@@ -5,125 +5,100 @@ import {
   SafeAreaView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   Image,
 } from "react-native";
 
-type Film = {
-  id: string;
-  title: string;
-  description: string;
-  image: string;
+type Pokemon = {
+  name: string;
+  url: string;
 };
 
-const API_BASE = "https://ghibliapi.vercel.app";
-
 export default function App() {
-  const [films, setFilms] = useState<Film[]>([]);
+  const [data, setData] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [query, setQuery] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  const fetchPokemons = async () => {
     try {
-      const res = await fetch(`${API_BASE}/films`);
-      const data: Film[] = await res.json();
-      setFilms(data);
-    } catch (e) {
-      console.log("Erro ao carregar dados", e);
+      const response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=20");
+      const json = await response.json();
+      setData(json.results);
+    } catch (err) {
+      setError("Erro ao carregar dados");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }
+  };
 
   useEffect(() => {
-    load();
+    fetchPokemons();
   }, []);
 
-  const filtered = query
-    ? films.filter((f) =>
-        f.title.toLowerCase().includes(query.toLowerCase())
-      )
-    : films;
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.muted}>Carregando...</Text>
-      </SafeAreaView>
-    );
-  }
+  const getPokemonImage = (url: string) => {
+    const id = url.split("/")[url.split("/").length - 2];
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <TextInput
-        placeholder="Buscar por título..."
-        value={query}
-        onChangeText={setQuery}
-        style={styles.input}
-      />
+      <Text style={styles.title}>Pokédex</Text>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        onRefresh={load}
-        refreshing={refreshing}
-        ListEmptyComponent={<Text style={styles.muted}>Nenhum resultado.</Text>}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Image
-              source={{ uri: item.image }}
-              style={styles.poster}
-              resizeMode="cover"
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text numberOfLines={3} style={styles.cardBody}>
-                {item.description}
-              </Text>
+      {loading && <ActivityIndicator size="large" />}
+
+      {error && <Text style={styles.error}>{error}</Text>}
+
+      {!loading && !error && (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item.name}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Image
+                source={{ uri: getPokemonImage(item.url) }}
+                style={styles.image}
+              />
+              <Text style={styles.name}>{item.name}</Text>
             </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F6F7F9" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  muted: { color: "#666" },
-
-  input: {
-    margin: 16,
+  container: {
+    flex: 1,
     backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 10,
-    borderColor: "#DDD",
-    borderWidth: 1,
+    padding: 20,
   },
-
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  error: {
+    color: "red",
+    fontSize: 18,
+    textAlign: "center",
+  },
   card: {
     flexDirection: "row",
-    backgroundColor: "#FFF",
-    marginHorizontal: 16,
-    marginVertical: 8,
-    padding: 12,
-    borderRadius: 10,
-    borderColor: "#EEE",
-    borderWidth: 1,
-  },
-
-  poster: {
-    width: 70,
-    height: 100,
+    alignItems: "center",
+    backgroundColor: "#f4f4f4",
+    padding: 10,
+    marginVertical: 6,
     borderRadius: 8,
-    marginRight: 12,
   },
-
-  cardTitle: { fontWeight: "700", marginBottom: 4, fontSize: 16 },
-  cardBody: { color: "#444" },
+  image: {
+    width: 60,
+    height: 60,
+    marginRight: 20,
+  },
+  name: {
+    fontSize: 20,
+    textTransform: "capitalize",
+  },
 });
